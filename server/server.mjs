@@ -35,6 +35,7 @@ import * as rest from './lib/rest.mjs';
 import * as life from './lib/lifecycle.mjs';
 import * as loc from './lib/localizar.mjs';
 import * as svc from './lib/servico-calculo.mjs';
+import { prepararCenariosContingencia } from './lib/contingencia.mjs';
 import { anotacoesDe } from './lib/anotacoes.mjs';
 import * as docs from './lib/documentos.mjs';
 import * as plano from './lib/plano.mjs';
@@ -398,6 +399,51 @@ server.registerTool('trct_para_pagamentos', {
     folha: z.string().optional().describe('Folha do TRCT nos autos.'),
   }),
 }, (args) => handler(() => conv.trctParaPagamentos({ campos: args.campos, totais: args.totais || {}, data: args.data || null, documento: args.documento || null, folha: args.folha || null })));
+
+// ---------------------------------------------------------------------------
+// Ferramentas — contingencia assistida (planejamento offline)
+// ---------------------------------------------------------------------------
+
+server.registerTool('contingencia_preparar_cenarios', {
+  title: 'Preparar cenarios de contingencia trabalhista',
+  description: 'Cria copias independentes de uma especificacao-base para cenarios de exposicao tecnica. Exige justificativa e fundamento para alteracoes; invalida aprovacoes anteriores; executa a validacao de cada cenario sem importar, liquidar ou alterar calculos no PJe-Calc. Nao estima probabilidade de condenacao nem provisao contabil. O calculista precisa revisar todas as premissas e reflexos.',
+  inputSchema: z.object({
+    ...ESPEC,
+    cenarios: z.array(z.object({
+      id: z.string().describe('Identificador unico do cenario (minusculas, sem espacos).'),
+      nome: z.string().describe('Nome legivel do cenario.'),
+      justificativa: z.string().describe('Fundamento geral das hipoteses deste cenario.'),
+      alteracoes: z.array(z.object({
+        tipo: z.enum(['ajustar_verba', 'excluir_verba', 'ajustar_calculo']).describe('Acao a executar na copia da especificacao-base.'),
+        verba: z.string().optional().describe('Nome da verba identificada de forma unica, para ajustar ou excluir.'),
+        campo: z.string().optional().describe('Campo permitido a alterar em verba ou calculo.'),
+        valor: z.unknown().optional().describe('Novo valor explicito no formato da especificacao do PJeCalcMCP.'),
+        fundamento: z.string().describe('Fonte, tese ou documento que justifica esta alteracao.')
+      })).describe('Lista de alteracoes explicitas; vazia para manter a especificacao-base.')
+    })).min(1).max(10).describe('Cenarios para preparacao e validacao (1 a 10).')
+  }),
+}, (args) => handler(() => {
+  const base = lerEspecificacao(args);
+  const r = prepararCenariosContingencia(base, args.cenarios);
+  return {
+    ...r,
+    cenarios: r.cenarios.map((cenario) => {
+      const v = svc.validarEspecificacao(cenario.especificacao);
+      return {
+        ...cenario,
+        validacao: {
+          valido: v.valido,
+          erros: v.erros,
+          avisos: v.avisos,
+          prontoParaCalcular: v.prontoParaCalcular,
+          bloqueiosParaCalcular: v.bloqueiosParaCalcular || [],
+          pendenciasPrevistas: v.pendenciasPrevistas || [],
+          premissasPadrao: v.resumo?.premissasPadrao || []
+        }
+      };
+    })
+  };
+}));
 
 server.registerTool('calculo_validar', {
   title: 'Validar especificação do cálculo',
