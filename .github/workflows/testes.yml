@@ -22,3 +22,5 @@ jobs:
           node-version: 22
       - name: Testes offline (sem PJe-Calc)
         run: node scripts/test-mcp.mjs
+      - name: Testes de contingencia (offline)
+        run: node scripts/test-contingencia.mjs
