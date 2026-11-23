@@ -12,7 +12,7 @@ const GRUPOS = [
     'pjecalc_status', 'pjecalc_logs', 'pjecalc_info', 'pjecalc_paginas', 'pjecalc_template_csv',
     'calculo_modelo_json', 'processo_mapa', 'titulo_compor', 'calculo_plano_interpretacao', 'calculo_documentos_necessarios',
     'documento_inventario', 'documento_texto', 'auditor_importar', 'holerites_para_historicos', 'cartoes_para_jornadas', 'extrato_para_fgts', 'trct_para_pagamentos',
-    'calculo_validar', 'calculo_ler_pjc', 'calculo_pendencias', 'calculo_recentes', 'calculo_comparar_referencia',
+    'contingencia_preparar_cenarios', 'calculo_validar', 'calculo_ler_pjc', 'calculo_pendencias', 'calculo_recentes', 'calculo_comparar_referencia',
     'catalogo_verbas', 'catalogo_municipios', 'catalogo_assuntos_cnj', 'catalogo_enums', 'catalogo_validar_documentos',
     'catalogo_pisos_vt', 'catalogo_atividades', 'catalogo_feriados', 'catalogo_cartao_ponto',
     'tabelas_status', 'rest_selic_periodo', 'rest_precatorio_atualizar', 'rest_tabelas_ultima_versao', 'rest_tabelas_versao',
