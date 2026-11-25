@@ -18,7 +18,7 @@ try {
   const info = c.init.result && c.init.result.serverInfo;
   verificar(info && info.name === 'pjecalc-mcp', `initialize -> ${info && info.name} ${info && info.version}`);
   const tools = (await c.enviar('tools/list')).result.tools.map((t) => t.name);
-  for (const t of ['contingencia_preparar_cenarios', 'calculo_criar', 'calculo_validar', 'calculo_gerar_pjc', 'calculo_importar_pjc', 'calculo_apurar_cartao_ponto', 'tabelas_status', 'tabelas_atualizar', 'pjecalc_localizar', 'calculo_pendencias', 'calculo_liquidar', 'calculo_relatorio', 'catalogo_verbas', 'catalogo_cartao_ponto', 'catalogo_atividades', 'catalogo_feriados', 'calculo_comparar_referencia', 'calculo_documentos_necessarios', 'processo_mapa', 'titulo_compor', 'calculo_plano_interpretacao', 'calculo_aprovar_plano', 'pjecalc_iniciar']) verificar(tools.includes(t), `ferramenta ${t}`);
+  for (const t of ['contingencia_preparar_cenarios', 'contingencia_comparar_cenarios', 'calculo_criar', 'calculo_validar', 'calculo_gerar_pjc', 'calculo_importar_pjc', 'calculo_apurar_cartao_ponto', 'tabelas_status', 'tabelas_atualizar', 'pjecalc_localizar', 'calculo_pendencias', 'calculo_liquidar', 'calculo_relatorio', 'catalogo_verbas', 'catalogo_cartao_ponto', 'catalogo_atividades', 'catalogo_feriados', 'calculo_comparar_referencia', 'calculo_documentos_necessarios', 'processo_mapa', 'titulo_compor', 'calculo_plano_interpretacao', 'calculo_aprovar_plano', 'pjecalc_iniciar']) verificar(tools.includes(t), `ferramenta ${t}`);
   console.log(`  (${tools.length} ferramentas)`);
   const defs = (await c.enviar('tools/list')).result.tools;
   const { ANOTACOES } = await import('../server/lib/anotacoes.mjs');
@@ -28,6 +28,7 @@ try {
   const leituraQueApaga = defs.filter((t) => t.annotations && t.annotations.readOnlyHint && t.annotations.destructiveHint).map((t) => t.name);
   verificar(!semAnotacao.length && !paramSemDescricao.length && !sobrando.length && !leituraQueApaga.length
     && defs.find((t) => t.name === 'calculo_excluir').annotations.destructiveHint === true && defs.find((t) => t.name === 'calculo_validar').annotations.readOnlyHint === true
+    && defs.find((t) => t.name === 'contingencia_comparar_cenarios').annotations.readOnlyHint === true
     && defs.every((t) => (t.description || '').length <= 1200),
     `todas as ferramentas com anotações (só lê / altera / apaga / internet) e todos os parâmetros descritos${[...semAnotacao, ...paramSemDescricao, ...sobrando, ...leituraQueApaga].length ? `: ${[...semAnotacao, ...paramSemDescricao, ...sobrando, ...leituraQueApaga].join(', ')}` : ''}`);
   const res = (await c.enviar('resources/list')).result.resources.map((r) => r.uri);
