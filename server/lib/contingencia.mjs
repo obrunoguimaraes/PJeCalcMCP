@@ -73,3 +73,24 @@ export function prepararCenariosContingencia(especificacaoBase, cenarios) {
       'Exclusoes podem afetar bases e reflexos: valide cada especificacao.',
       'Aprovacoes anteriores nao sao herdadas; cada cenario exige nova revisao.'],cenarios:saida};
 }
+
+/** Compara resultados alternativos, sem somar exposicoes do mesmo processo. */
+export function compararCenariosContingencia(itens, dataBase) {
+  exigir(typeof dataBase === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dataBase) && Number.isFinite(Date.parse(dataBase)) && new Date(dataBase).toISOString().slice(0,10) === dataBase, 'Data-base ISO invalida.');
+  exigir(Array.isArray(itens) && itens.length >= 2 && itens.length <= 10, 'Informe de 2 a 10 cenarios.');
+  const ids = new Set();
+  const numero = itens[0]?.processo;
+  exigir(typeof numero === 'string' && numero.trim(), 'Processo obrigatorio.');
+  const campos = ['brutoDevidoAoReclamante','liquidoDevidoAoReclamante','totalDevidoPeloReclamado'];
+  const linhas = itens.map(i => {
+    exigir(i && i.processo === numero, 'Compare somente cenarios do mesmo processo.');
+    exigir(typeof i.id === 'string' && i.id.trim() && !ids.has(i.id), 'Identificador ausente ou repetido.');
+    ids.add(i.id);
+    const r = i.resultado;
+    exigir(r && r.dataLiquidacao === dataBase, 'Resultado ausente ou data-base divergente: ' + i.id);
+    exigir(campos.every(k => typeof r[k] === 'number' && Number.isFinite(r[k]) && Number.isSafeInteger(Math.round(r[k]*100))), 'Total ausente ou invalido: ' + i.id);
+    return {id:i.id, totais:Object.fromEntries(campos.map(k=>[k,Math.round(r[k]*100)]))};
+  });
+  const ref = linhas[0];
+  return {processo:numero,dataBase,referencia:ref.id,cenarios:linhas.map(i=>({id:i.id,totais:Object.fromEntries(campos.map(k=>[k,i.totais[k]/100])),diferencas:Object.fromEntries(campos.map(k=>[k,(i.totais[k]-ref.totais[k])/100]))})),revisaoHumanaObrigatoria:true,observacao:'Comparacao aritmetica de resultados informados, sem certificacao de origem ou soma de cenarios; nao representa provisao contabil.'};
+}
