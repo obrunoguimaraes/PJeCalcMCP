@@ -35,7 +35,7 @@ import * as rest from './lib/rest.mjs';
 import * as life from './lib/lifecycle.mjs';
 import * as loc from './lib/localizar.mjs';
 import * as svc from './lib/servico-calculo.mjs';
-import { prepararCenariosContingencia } from './lib/contingencia.mjs';
+import { prepararCenariosContingencia, compararCenariosContingencia } from './lib/contingencia.mjs';
 import { anotacoesDe } from './lib/anotacoes.mjs';
 import * as docs from './lib/documentos.mjs';
 import * as plano from './lib/plano.mjs';
@@ -447,6 +447,18 @@ server.registerTool('contingencia_preparar_cenarios', {
     })
   };
 }));
+
+server.registerTool('contingencia_comparar_cenarios', {
+  title: 'Comparar resultados alternativos de contingencia',
+  description: 'Compara totais informados de cenarios do mesmo processo e data-base, sem somar hipoteses alternativas. O primeiro item e a referencia. Nao certifica a origem dos valores nem calcula provisao contabil.',
+  inputSchema: z.object({
+    data_base: z.string(),
+    itens: z.array(z.object({
+      id: z.string(), processo: z.string(),
+      resultado: z.object({ dataLiquidacao: z.string(), brutoDevidoAoReclamante: z.number(), liquidoDevidoAoReclamante: z.number(), totalDevidoPeloReclamado: z.number() })
+    })).min(2).max(10)
+  })
+}, (args) => handler(() => compararCenariosContingencia(args.itens, args.data_base)));
 
 server.registerTool('calculo_validar', {
   title: 'Validar especificação do cálculo',
