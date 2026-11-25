@@ -31,6 +31,21 @@ export function prepararCenariosContingencia(especificacaoBase, cenarios) {
     const spec = clonar(especificacaoBase);
     const aprovacaoAnteriorInvalidada = Boolean(spec.contrato && spec.contrato.aprovacao);
     if (spec.contrato) delete spec.contrato.aprovacao;
+    const alteradas = c.premissasAlteradas ?? [];
+    const fixas = c.premissasFixas ?? [];
+    const pendencias = c.pendencias ?? [];
+    exigir(Array.isArray(alteradas) && Array.isArray(fixas) && Array.isArray(pendencias), ref + ': premissas e pendencias devem ser listas.');
+    const idsPremissas = new Set();
+    for (const [tipo, itens] of [['alterada', alteradas], ['fixa', fixas]]) {
+      for (const x of itens) {
+        exigir(x && typeof x.id === 'string' && x.id.trim(), ref + ': id de premissa obrigatorio.');
+        exigir(!idsPremissas.has(x.id), ref + ': premissa repetida ou simultaneamente fixa e alterada: ' + x.id);
+        idsPremissas.add(x.id);
+        exigir(tipo === 'fixa' ? typeof x.motivo === 'string' && x.motivo.trim() : proprio(x,'valor') && typeof x.descricao === 'string' && x.descricao.trim(), ref + ': fundamento da premissa obrigatorio: ' + x.id);
+      }
+    }
+    exigir(pendencias.every(x => typeof x === 'string' && x.trim()), ref + ': pendencia sem descricao.');
+    spec.cenario = { nome:c.nome, descricao:c.justificativa, premissasAlteradas:clonar(alteradas), premissasFixas:clonar(fixas), pendencias:clonar(pendencias) };
     const diferencas = [];
     for (const [j,a] of c.alteracoes.entries()) {
       const item = ref + ', alteracao ' + (j+1);
@@ -52,7 +67,7 @@ export function prepararCenariosContingencia(especificacaoBase, cenarios) {
     exigir(spec.verbas.length > 0, ref + ': todas as verbas foram excluidas.');
     saida.push({id:c.id,nome:c.nome,justificativa:c.justificativa,alteracoes:diferencas,aprovacaoAnteriorInvalidada,revisaoHumanaObrigatoria:true,especificacao:spec});
   }
-  return {versao:'contingencia-assistida-v1',processo:especificacaoBase.processo?.numero || null,totalCenarios:saida.length,
+  return {versao:'contingencia-assistida-v2',processo:especificacaoBase.processo?.numero || null,totalCenarios:saida.length,
     observacoes:['Os cenarios representam hipoteses tecnicas, nao probabilidades de condenacao.',
       'Exposicao tecnica nao e provisao contabil.',
       'Exclusoes podem afetar bases e reflexos: valide cada especificacao.',
