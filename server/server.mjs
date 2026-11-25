@@ -413,6 +413,9 @@ server.registerTool('contingencia_preparar_cenarios', {
       id: z.string().describe('Identificador unico do cenario (minusculas, sem espacos).'),
       nome: z.string().describe('Nome legivel do cenario.'),
       justificativa: z.string().describe('Fundamento geral das hipoteses deste cenario.'),
+      premissasAlteradas: z.array(z.object({ id:z.string(), valor:z.unknown(), descricao:z.string() })).optional(),
+      premissasFixas: z.array(z.object({ id:z.string(), motivo:z.string() })).optional(),
+      pendencias: z.array(z.string()).optional(),
       alteracoes: z.array(z.object({
         tipo: z.enum(['ajustar_verba', 'excluir_verba', 'ajustar_calculo']).describe('Acao a executar na copia da especificacao-base.'),
         verba: z.string().optional().describe('Nome da verba identificada de forma unica, para ajustar ou excluir.'),
@@ -435,8 +438,8 @@ server.registerTool('contingencia_preparar_cenarios', {
           valido: v.valido,
           erros: v.erros,
           avisos: v.avisos,
-          prontoParaCalcular: v.prontoParaCalcular,
-          bloqueiosParaCalcular: v.bloqueiosParaCalcular || [],
+          prontoParaCalcular: Boolean(cenario.especificacao.contrato && v.prontoParaCalcular),
+          bloqueiosParaCalcular: [...(cenario.especificacao.contrato ? [] : ['Contrato de dados obrigatorio para contingencia.']), ...(v.bloqueiosParaCalcular || [])],
           pendenciasPrevistas: v.pendenciasPrevistas || [],
           premissasPadrao: v.resumo?.premissasPadrao || []
         }
