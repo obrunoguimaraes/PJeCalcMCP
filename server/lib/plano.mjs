@@ -23,7 +23,10 @@ function estavel(v) {
 export function hashContrato(spec) {
   const c = { ...((spec && spec.contrato) || {}) };
   delete c.aprovacao; delete c.revisoesDeAlerta;
-  return crypto.createHash('sha256').update(estavel({ contrato: c, cenario: (spec && spec.cenario) || null })).digest('hex');
+  // Cenários exigem aprovação da parametrização completa, não só do contrato.
+  // Os demais cálculos preservam a compatibilidade com o hash anterior.
+  const payload = spec?.cenario ? { ...spec, contrato: c } : { contrato: c, cenario: null };
+  return crypto.createHash('sha256').update(estavel(payload)).digest('hex');
 }
 export function verificarAprovacao(spec) {
   const c = spec && spec.contrato;
