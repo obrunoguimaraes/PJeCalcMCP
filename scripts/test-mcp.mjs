@@ -109,7 +109,12 @@ try {
   const estrito = { ...ex('calculo-referencia.json'), exigirDecisoesExplicitas: true };
   const q7 = await c.ferramenta('calculo_validar', { especificacao: estrito });
   verificar(q7.valido === false && /exigirDecisoesExplicitas/.test(q7.erros[0]), 'exigirDecisoesExplicitas recusa premissas deixadas no padrão');
-  const resNeg = extrairResumo(fs.readFileSync(path.resolve(__dirname, 'fixtures', 'resumo-com-rubrica-negativa.txt'), 'utf-8'));
+  const resumoNegLF = fs.readFileSync(path.resolve(__dirname, 'fixtures', 'resumo-com-rubrica-negativa.txt'), 'utf-8').replace(/\r\n?/g, '\n');
+  const resNeg = extrairResumo(resumoNegLF);
+  for (const [formato, quebra] of [['CRLF', '\r\n'], ['CR', '\r']]) {
+    const alternativo = extrairResumo(resumoNegLF.replace(/\n/g, quebra));
+    verificar(JSON.stringify(alternativo) === JSON.stringify(resNeg), `resumo: resultado identico com ${formato} e LF`);
+  }
   const ferias = resNeg.verbas.find((v) => v.descricao === 'FÉRIAS + 1/3');
   verificar(ferias && ferias.total === -24592.62 && resNeg.conferencia.somaConfere === true && resNeg.brutoDevidoAoReclamante === 934.22 && resNeg.liquidoDevidoAoReclamante === -7269.06,
     `resumo: rubrica negativa lida (${ferias && ferias.total}), soma ${resNeg.conferencia.somaRubricas} = total do quadro ${resNeg.conferencia.totalDoQuadro}, líquido negativo ${resNeg.liquidoDevidoAoReclamante}`);
