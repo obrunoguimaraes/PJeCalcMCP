@@ -452,11 +452,11 @@ server.registerTool('contingencia_comparar_cenarios', {
   title: 'Comparar resultados alternativos de contingencia',
   description: 'Compara totais informados de cenarios do mesmo processo e data-base, sem somar hipoteses alternativas. O primeiro item e a referencia. Nao certifica a origem dos valores nem calcula provisao contabil.',
   inputSchema: z.object({
-    data_base: z.string(),
+    data_base: z.string().describe('Data-base comum dos resultados, no formato AAAA-MM-DD.'),
     itens: z.array(z.object({
-      id: z.string(), processo: z.string(),
-      resultado: z.object({ dataLiquidacao: z.string(), brutoDevidoAoReclamante: z.number(), liquidoDevidoAoReclamante: z.number(), totalDevidoPeloReclamado: z.number() })
-    })).min(2).max(10)
+      id: z.string().describe('Identificador unico do cenario.'), processo: z.string().describe('Numero do mesmo processo em todos os cenarios.'),
+      resultado: z.object({ dataLiquidacao: z.string().describe('Data da liquidacao em AAAA-MM-DD.'), brutoDevidoAoReclamante: z.number().describe('Credito bruto em reais.'), liquidoDevidoAoReclamante: z.number().describe('Credito liquido em reais.'), totalDevidoPeloReclamado: z.number().describe('Exposicao total do reclamado em reais.') }).describe('Totais informados de uma liquidacao.')
+    })).min(2).max(10).describe('Resultados alternativos; o primeiro e a referencia da comparacao.')
   })
 }, (args) => handler(() => compararCenariosContingencia(args.itens, args.data_base)));
 
