@@ -2,7 +2,7 @@
 const CARIMBO = /^(Documento assinado eletronicamente.*|Assinado eletronicamente por.*|https?:\/\/pje\S*.*|N[úu]mero do (documento|processo):.*|Fls\.?\s*:?\s*\d+|ID\.?\s*[0-9a-f]{7}\s*-\s*P[áa]g\.\s*\d+|\d+)$/i;
 const espacado = s => [...s.replace(/\s/g, '')].join('\\s*');
 const SIGILO = new RegExp(espacado('documento em sigilo ou segredo de justica'), 'gi');
-const VISIBILIDADE = new RegExp(espacado('usuario em visibilidade') + '\\s*:', 'gi');
+const VISIBILIDADE = new RegExp([...('usuarioemvisibilidade')].map(c => '[' + c + c.toUpperCase() + ']').join('\\s*') + '\\s*:', 'g');
 const dobrar = t => String(t ?? '').normalize('NFD').replace(/\p{M}/gu, '');
 export function analisarTextoPje(texto, { minimo = 20, imagens = 0 } = {}) {
   const original = String(texto ?? '');
