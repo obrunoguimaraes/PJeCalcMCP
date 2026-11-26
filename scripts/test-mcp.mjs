@@ -136,6 +136,22 @@ try {
   const pag = (extra = {}) => ({ id: 'PG1', titulo: '13º salário 2014', parcelas: ['P3'], competencia: '2014-12', valor: 1000, emitente: 'Empresa Teste Ltda', documento: 'D2', folha: 'fl. 60', comando: 'DEC1', ...extra });
   const abater = (sp, verba, valor, origem = 'PG1') => { sp.verbas.find((v) => v.verba === verba).valorPago = { tipo: 'INFORMADO', valor, origem }; };
   const conflitoJornada = [{ id: 'J1', descricao: 'jornada fixada na sentença inclui fevereiro de 2015' }];
+  // Regressao: uma diferenca liquida manual nao pode esconder os reflexos deferidos.
+  const insalubridade = (sp, modo) => {
+    const p = sp.contrato.parcelas.find(p => p.id === 'P6');
+    p.rubrica = 'DIFERENÇAS DE ADICIONAL DE INSALUBRIDADE';
+    p.reflexos = ['13º SALÁRIO', 'FÉRIAS + 1/3'];
+    const i = sp.verbas.findIndex(v => v.origem === 'P6');
+    sp.verbas[i] = modo === 'manual'
+      ? { personalizada: { modelo: 'DIFERENÇA SALARIAL', nome: p.rubrica, valor: 300 }, origem: 'P6' }
+      : { verba: 'ADICIONAL DE INSALUBRIDADE', origem: 'P6', reflexos: ['13º SALÁRIO', 'FÉRIAS + 1/3'], ...(modo === 'informado' ? { ocorrencias: [{ competencia: '2014-01', devido: 300 }] } : {}) };
+  };
+  const manualIns = audit(sp => insalubridade(sp, 'manual'));
+  verificar(manualIns.verificacoes.some(v => v.estado === 'alerta' && /sem verba Expresso de insalubridade/.test(v.detalhe)) && manualIns.verificacoes.filter(v => v.estado === 'falha' && /reflexo deferido da insalubridade/.test(v.detalhe)).length === 2, 'diferencas de insalubridade manuais: alerta e bloqueio pelos reflexos omitidos');
+  const nativaIns = audit(sp => insalubridade(sp, 'nativa'));
+  verificar(!nativaIns.verificacoes.some(v => /parametrizacao/.test(v.item)), 'insalubridade nativa com reflexos vinculados: sem alerta de parametrizacao');
+  const informadoIns = audit(sp => insalubridade(sp, 'informado'));
+  verificar(informadoIns.verificacoes.some(v => v.estado === 'alerta' && /insalubridade com devido informado/.test(v.detalhe)), 'insalubridade com devido informado: alerta para revisar diferenca liquida');
   const casosAud = [
     ['verba sem origem', (sp) => { delete sp.verbas[0].origem; }, /sem "origem"/],
     ['parcela indeferida calculada', (sp) => { sp.contrato.parcelas.find((p) => p.id === 'P5').situacao = 'INDEFERIDA'; }, /INDEFERIDA e está sendo calculada/],
