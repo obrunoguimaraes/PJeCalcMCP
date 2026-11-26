@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { lerPdf, extrairImagens } from './pdf.mjs';
+import { segmentarPaginasPje } from './texto-pje.mjs';
 import { CATEGORIAS } from './documentos.mjs';
 
 const r2 = (x) => Math.round((Number(x) + Number.EPSILON) * 100) / 100;
@@ -93,9 +94,12 @@ export function inventarioDocumentos({ arquivos = [], pasta = null, processo = n
         it.paginasComTexto = pdf.paginas.filter((p) => p.temTexto).length;
         it.paginasSemTexto = faixa(sem) || null;
         it.paginasComImagem = faixa(pdf.paginas.filter((p) => p.imagens > 0).map((p) => p.numero)) || null;
+        it.paginasComMarcaSigilo = faixa(pdf.paginas.filter(p => p.marcaSigilo).map(p => p.numero)) || null;
+        it.paginasParaRevisaoVisual = faixa(pdf.paginas.filter(p => p.revisaoVisual).map(p => p.numero)) || null;
+        it.segmentacaoPje = segmentarPaginasPje(pdf.paginas);
         const textoTodo = pdf.paginas.map((p) => p.texto || '').join('\n');
         it.tipoProvavel = tipoProvavel(textoTodo);
-        it.porPagina = pdf.paginas.map((p) => ({ pagina: p.numero, caracteres: p.caracteres, imagens: p.imagens, tipoProvavel: p.temTexto ? tipoProvavel(p.texto) : null }));
+        it.porPagina = pdf.paginas.map((p) => ({ pagina: p.numero, caracteres: p.caracteres, caracteresUteis: p.caracteresSemCarimbo ?? p.caracteres, marcaSigilo: p.marcaSigilo, revisaoVisual: p.revisaoVisual, imagens: p.imagens, tipoProvavel: p.temTexto ? tipoProvavel(p.texto) : null }));
         for (const m of textoTodo.matchAll(CNJ)) processosCitados.add(m[0]);
         if (pdf.avisos.length) it.avisos = pdf.avisos;
       } catch (e) { it.tipo = 'PDF'; it.erro = e.message; }
@@ -132,7 +136,7 @@ export function textoDocumento({ arquivo, paginas = null, maxCaracteres = 60000 
     const resto = Math.max(0, maxCaracteres - total);
     const texto = (p.texto || '').slice(0, resto);
     total += texto.length;
-    out.push({ numero: p.numero, temTexto: p.temTexto, imagens: p.imagens, caracteres: p.caracteres, texto, ...(p.temTexto ? {} : { instrucao: 'página sem texto próprio (escaneada; o carimbo do PJe não conta): veja como imagem com documento_imagens' }) });
+    out.push({ numero: p.numero, temTexto: p.temTexto, imagens: p.imagens, caracteres: p.caracteres, caracteresUteis: p.caracteresSemCarimbo ?? p.caracteres, marcaSigilo: p.marcaSigilo, revisaoVisual: p.revisaoVisual, texto, ...(p.revisaoVisual ? { instrucao: 'Confira visualmente a pagina: texto util insuficiente ou imagem com marca de sigilo. Use documento_imagens ou renderize a pagina completa.' } : {}) });
   }
   return { arquivo, tipo: 'PDF', totalPaginas: pdf.totalPaginas, criptografado: pdf.criptografado, paginas: out, cortado: total >= maxCaracteres, avisos: pdf.avisos, lembrete: 'Texto extraído do PDF (pode sair fora da ordem visual das colunas). Confira os números na página antes de usar.' };
 }
