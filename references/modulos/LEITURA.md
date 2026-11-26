@@ -3,6 +3,18 @@
 Carregue **sempre**, antes de interpretar qualquer documento, inclusive os de outros processos do mapa.
 Um erro de leitura vira erro de cálculo que nenhuma conferência posterior encontra.
 
+## Fluxo direto de leitura dos autos (Windows e Linux)
+
+Priorize as ferramentas do próprio MCP e suas referências. Não é necessário carregar skills externas ou instalar OCR para usar o fluxo original.
+
+- O inventário informa `paginasComMarcaSigilo`, `paginasParaRevisaoVisual` e `segmentacaoPje`. A marca conhecida de sigilo é descontada na contagem de texto útil; o texto original permanece disponível. Páginas mistas com imagem e sigilo exigem conferência visual.
+- A segmentação é uma sugestão baseada em IDs consecutivos de assinatura. Páginas sem ID confirmado ou ambíguas ficam pendentes; confronte com o sumário do PJe, especialmente capas e anexos.
+- A extração de imagens não equivale necessariamente à página completa. Quando houver tabelas, sobreposições ou formatos não suportados, abra/renderize a página completa.
+- O script opcional `node scripts/indexar-autos.mjs "<autos.pdf>" "<nova-pasta-local>"` força UTF-8 com pdftotext (Poppler/Xpdf) e recorre ao leitor nativo se o comando falhar. Gera paginas.jsonl e inventario.json com todas as páginas ainda pendentes de leitura. Use pdftotext -enc UTF-8 -layout para conferir colunas.
+- Para OCR seletivo, acrescente `--ocr-paginas 12,15-17`. Requer pdftoppm e Tesseract com idioma por no PATH. Falhas ficam registradas como pendências. O OCR é auxiliar e não substitui a conferência visual de números ou o contrato de dados.
+- Mantenha PDFs, imagens, textos e relatórios em pasta local protegida, fora de repositórios. Não envie autos a serviços externos não autorizados.
+- Nenhum inventário ou OCR certifica leitura ou autoriza criar cálculo. Mantenha a aprovação expressa do plano e todas as verificações de cobertura.
+
 ## 1. Inventário antes de ler
 
 Liste cada arquivo e cada página e registre:
