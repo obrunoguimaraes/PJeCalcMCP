@@ -33,6 +33,16 @@ Carregue sempre que houver históricos salariais, bases de cálculo ou reflexos.
 6. **Proporcionalidade**: a caixa "proporcionalizar" (devido, base e quantidade) conforme o título;
    indenizações em geral não proporcionalizam.
 
+
+## Diferenças de parcelas salariais (insalubridade, periculosidade e outras verbas do catálogo)
+
+- Consulte `catalogo_verbas` e prefira a verba Expresso correspondente, com os parâmetros do título. Não substitua uma verba calculável por uma verba manual que contenha apenas o saldo líquido.
+- Em diferenças de insalubridade, apure o adicional integral devido no grau, base e período fixados. Registre o adicional efetivamente pago nos holerites, por competência, em `ocorrencias[].pago` com a origem em `contrato.pagamentos`. Alternativamente use um histórico de pagamentos exclusivo em `valorPago` calculado, documentando os valores e verificando a proporcionalidade. Não faça ambos para o mesmo pagamento.
+- Mantenha o valor devido, pago e diferença separados. Não preencha `ocorrencias[].devido` com a diferença já deduzida. Competência sem prova de pagamento não equivale automaticamente a valor zero.
+- Ative os reflexos deferidos no catálogo e configure `gerarReflexo`, incidências, médias, avos e eventual pagamento do próprio reflexo de acordo com o título. Evite reflexos não deferidos e dedução duplicada. FGTS e multa devem ser tratados no bloco próprio quando aplicáveis.
+- Uma verba manual é excepcional: justifique a impossibilidade do modelo nativo ou o comando expresso em valor informado e preserve a memória de cálculo e os reflexos aplicáveis. A auditoria sinaliza diferenças de insalubridade sem modelo nativo ou com devido informado e reprova reflexos contratuais reconhecidos que estejam ausentes da especificação vinculada.
+- No plano de interpretação, demonstre a base, percentual, devido, pago, diferença e reflexos por competência; após liquidar, confira o PJC e o relatório de ocorrências, não apenas o total do resumo.
+
 ## Conferência dos números
 
 A conferência independente recalcula cada ocorrência: base ÷ divisor × multiplicador × quantidade
