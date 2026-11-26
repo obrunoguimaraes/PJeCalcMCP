@@ -198,6 +198,11 @@ export function auditarEspecificacao(spec) {
     for (const v of nativas) {
       if (v.valor != null || lista(v.ocorrencias).some(e => e.devido != null)) registrar(verificacoes, ctx, 'alerta', 'insalubridade com devido informado: confira se nao foi lancada somente a diferenca liquida no lugar do valor integral calculado.');
     }
+    const pagamentos = [...pags.values()].filter(pg => lista(pg.parcelas).includes(p.id) && Number(pg.valor) > 0);
+    if (pagamentos.length && !vinculadas.some(v => {
+      const q = v.personalizada || v;
+      return q.valorPago?.tipo === 'CALCULADO' || lista(q.ocorrencias).some(e => Number(e.pago) > 0) || Number(q.valorPago?.valor ?? q.valorPago) > 0;
+    })) registrar(verificacoes, ctx, 'alerta', 'ha pagamentos documentados da parcela, mas nenhum valor pago foi lancado: confira abatimento por competencia, conforme o titulo, sem presumir meses faltantes.');
     const contratuais = lista(p.reflexos).map(semAcento).filter(r => /13|DECIMO|FERIAS|AVISO PREVIO|REPOUSO|DSR/.test(r));
     const reflexos = vinculadas.flatMap(v => {
       const q = v.personalizada || v;
