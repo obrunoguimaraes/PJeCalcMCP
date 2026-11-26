@@ -11,6 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import { analisarTextoPje } from './texto-pje.mjs';
 
 // ---------------------------------------------------------------------------
 // Parser de objetos PDF (texto -> valores JS)
@@ -453,13 +454,13 @@ export function lerPdf(bytes, { paginas: so = null, maxCaracteresPorPagina = 200
     const caracteres = texto.replace(/\s/g, '').length;
     // o carimbo de assinatura do PJe (rodapé com assinante, link, número do documento e folha) vem como texto
     // até nas páginas escaneadas: não conta para decidir se a página tem texto próprio
-    const uteis = texto.split('\n').filter((l) => !RE_CARIMBO_PJE.test(l.trim())).join('').replace(/\s/g, '').length;
-    out.push({ numero, texto, caracteres, ...(uteis !== caracteres ? { caracteresSemCarimbo: uteis } : {}), temTexto: uteis >= 20, imagens });
+    const meta = analisarTextoPje(texto, { imagens });
+    const uteis = meta.caracteresUteis;
+    out.push({ numero, texto, caracteres, ...(uteis !== caracteres ? { caracteresSemCarimbo: uteis } : {}), temTexto: meta.temTexto, marcaSigilo: meta.marcaSigilo, revisaoVisual: meta.revisaoVisual, imagens });
   });
   return { totalPaginas: pags.length, versao: doc.versao, criptografado: doc.criptografado, paginas: out, avisos };
 }
 
-const RE_CARIMBO_PJE = /^(Documento assinado eletronicamente.*|Assinado eletronicamente por.*|https?:\/\/pje\S*.*|N[úu]mero do (documento|processo):.*|Fls\.?\s*:?\s*\d+|ID\.?\s*[0-9a-f]{7}\s*-\s*P[áa]g\.\s*\d+|\d+)$/i;
 
 // ---------------------------------------------------------------------------
 // Imagens das páginas (escaneadas): para o agente VER a página sem depender de renderizador
