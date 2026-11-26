@@ -15,6 +15,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { tipoProvavel, cartoesParaJornadas } from './conversores.mjs';
+import { analisarTextoPje, carimboPje } from './texto-pje.mjs';
 
 const CNJ = /\b\d{7}-?\d{2}\.?\d{4}\.?5\.?\d{2}\.?\d{4}\b/g;
 const v = (item, estado, detalhe) => ({ item, estado, detalhe });
@@ -43,20 +44,7 @@ const RE_EMBARGOS = /EMBARGOS DE DECLARACAO|CONHECO DOS EMBARGOS|EMBARGOS DECLAR
 // rodapé dos autos do PJe, nas duas instâncias:
 //   "Documento assinado eletronicamente por NOME, em 19/08/2025, às 18:53:31 - e518b94" ... "Fls.: 14"
 //   "Assinado eletronicamente por: NOME - 20/05/2026 16:14:32 - 46dd667" "ID. 46dd667 - Pág. 1" "Fls.: 110"
-const RE_ASSINATURA = [
-  /Documento assinado eletronicamente por (.+?), em (\d{2}\/\d{2}\/\d{4})[^\n]*?-\s*([0-9a-f]{7})\b/i,
-  /Assinado eletronicamente por:\s*(.+?)\s*-\s*(\d{2}\/\d{2}\/\d{4})[^\n]*?-\s*([0-9a-f]{7})\b/i,
-];
-const RE_FOLHA = /\bFls\.?:\s*(\d+)/i;
-const RE_RODAPE = /(Documento assinado eletronicamente por|N[úu]mero do processo:|N[úu]mero do documento:|Assinado eletronicamente por:)[\s\S]*$/i;
-function carimboPje(texto) {
-  const t = String(texto || '');
-  let a = null;
-  for (const re of RE_ASSINATURA) { a = re.exec(t); if (a) break; }
-  const f = RE_FOLHA.exec(t.slice(-400));
-  return { idPje: a ? a[3].toLowerCase() : null, assinadoPor: a ? a[1].trim() : null, data: a ? a[2] : null, folha: f ? Number(f[1]) : null };
-}
-const semRodape = (t) => String(t || '').replace(RE_RODAPE, '').replace(RE_FOLHA, '').trim();
+const semRodape = t => analisarTextoPje(t, { minimo: MIN_TEXTO }).textoUtil;
 
 function lerJson(arq, rotulo) {
   try { return JSON.parse(fs.readFileSync(arq, 'utf-8')); } catch (e) { throw new Error(`${rotulo}: não consegui ler ${arq} (${e.message}).`); }
@@ -107,14 +95,14 @@ function blocosDoArquivo(manifesto, paginas, fonte, verificacoes) {
     pecas = [];
     for (const c of carimbos) {
       const ult = pecas[pecas.length - 1];
-      if (ult && (!c.idPje || ult.idPje === c.idPje)) {
+      if (ult && c.idPje && ult.idPje === c.idPje && ult.fim + 1 === c.pagina) {
         ult.fim = c.pagina; if (c.folha != null) ult.folhaFim = c.folha; if (c.idPje) ult.confirmadas++;
         continue;
       }
       const pg = porPagina.get(c.pagina);
       pecas.push({ idPje: c.idPje, rotulo: pg && pg.piece, assinadoPor: c.assinadoPor, data: c.data, ini: c.pagina, fim: c.pagina, folhaIni: c.folha, folhaFim: c.folha, confirmadas: c.idPje ? 1 : 0 });
     }
-    verificacoes.push(v(`documentos de ${fonte.name}`, 'ok', `${pecas.length} documento(s) separados pelo rodapé de assinatura do PJe (id do documento e folhas) em ${carimbos.length} página(s)`));
+    verificacoes.push(v(`documentos de ${fonte.name}`, 'ok', `${pecas.length} documento(s) sugeridos pelo rodapé de assinatura do PJe (id e folhas); ${carimbos.length - comCarimbo} página(s) sem ID confirmado, confira com o sumário`));
   } else {
     const ps = (manifesto.pieces && manifesto.pieces.length) ? manifesto.pieces : [{ id: 'P001', piece: null, pdf_page_start: 1, pdf_page_end: fonte.pages || paginas.length }];
     pecas = ps.map((p) => ({ peca: p.id, rotulo: p.piece, data: p.date || null, ini: Number(p.pdf_page_start), fim: Number(p.pdf_page_end ?? p.pdf_page_start), folhaIni: p.court_page_start ?? null, folhaFim: p.court_page_end ?? null, confirmadas: 0 }));
@@ -127,7 +115,7 @@ function blocosDoArquivo(manifesto, paginas, fonte, verificacoes) {
       if (!p) { pc.falhas.push(k); continue; }
       pc.textos.push(p.text || '');
       if (p.status === 'FAILED') pc.falhas.push(k);
-      else if (p.source !== 'native_text' || p.quality === 'low' || semRodape(p.text).length < MIN_TEXTO) pc.semTexto.push(k);
+      else if (p.source !== 'native_text' || p.quality === 'low' || !analisarTextoPje(p.text, { minimo: MIN_TEXTO }).temTexto) pc.semTexto.push(k);
     }
     if (pc.rotulo === 'Não identificado') pc.rotulo = null;
   }

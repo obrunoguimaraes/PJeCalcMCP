@@ -2,7 +2,7 @@ name: Testes
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/robustez-documental-v3]
   pull_request:
   workflow_dispatch:
 
@@ -12,7 +12,11 @@ permissions:
 jobs:
   offline:
     name: Testes offline
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       # os arquivos do repositório usam LF; sem isto o checkout no Windows converte para CRLF
       - run: git config --global core.autocrlf false
@@ -24,3 +28,6 @@ jobs:
         run: node scripts/test-mcp.mjs
       - name: Testes de contingencia (offline)
         run: node scripts/test-contingencia.mjs
+
+      - name: Testes de leitura documental (offline)
+        run: node scripts/test-leitura-documental.mjs

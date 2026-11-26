@@ -184,6 +184,43 @@ export function auditarEspecificacao(spec) {
     if (semAcento(p.situacao) === 'DEFERIDA' && !usadas.has(p.id) && !p.naoCalcular) registrar(verificacoes, `parcela ${p.id} (${p.rubrica || '?'})`, 'falha', 'parcela DEFERIDA sem verba no cálculo (se não deve ser calculada, informe "naoCalcular" com o motivo)');
   }
 
+  // Diferencas de insalubridade: a verba expressa preserva o devido, pago e reflexos.
+  // O nome da parcela do contrato e do catalogo pode variar conforme grau/periodo.
+  // Uma condenacao excepcional em valor liquido informado exige revisao expressa,
+  // nunca uma conversao automatica da verba ou dos valores pelo auditor.
+  for (const p of parcs.values()) {
+    const rubrica = semAcento(p.rubrica);
+    if (!/DIFEREN/.test(rubrica) || !/INSALUBR/.test(rubrica) || !usadas.has(p.id)) continue;
+    const vinculadas = lista(s.verbas).filter((v,i) => (origemDaVerba.get(i) || []).includes(p.id));
+    const nativas = vinculadas.filter(v => !v.personalizada && /INSALUBR/.test(semAcento(v.verba)));
+    const ctx = 'parcela '+p.id+' ('+p.rubrica+') / parametrizacao';
+    if (!nativas.length) registrar(verificacoes, ctx, 'alerta', 'diferencas de insalubridade sem verba Expresso de insalubridade: consulte catalogo_verbas, apure o devido e lance os pagamentos separadamente. Verba manual liquida exige justificativa expressa no titulo ou revisao fundamentada.');
+    for (const v of nativas) {
+      if (v.valor != null || lista(v.ocorrencias).some(e => e.devido != null)) registrar(verificacoes, ctx, 'alerta', 'insalubridade com devido informado: confira se nao foi lancada somente a diferenca liquida no lugar do valor integral calculado.');
+    }
+    const pagamentos = [...pags.values()].filter(pg => lista(pg.parcelas).includes(p.id) && Number(pg.valor) > 0);
+    if (pagamentos.length && !vinculadas.some(v => {
+      const q = v.personalizada || v;
+      return q.valorPago?.tipo === 'CALCULADO' || lista(q.ocorrencias).some(e => Number(e.pago) > 0) || Number(q.valorPago?.valor ?? q.valorPago) > 0;
+    })) registrar(verificacoes, ctx, 'alerta', 'ha pagamentos documentados da parcela, mas nenhum valor pago foi lancado: confira abatimento por competencia, conforme o titulo, sem presumir meses faltantes.');
+    const contratuais = lista(p.reflexos).map(semAcento).filter(r => /13|DECIMO|FERIAS|AVISO PREVIO|REPOUSO|DSR/.test(r));
+    const reflexos = vinculadas.flatMap(v => {
+      const q = v.personalizada || v;
+      return lista(q.reflexos).map(r => semAcento(typeof r === 'string' ? r : r.nome));
+    });
+    // Admite reflexo autonomo vinculado a mesma parcela, mas nao confunde outra verba
+    // rescisoria ou salarial sem vinculo documental com reflexo da insalubridade.
+    const autonomos = vinculadas.map(v => semAcento(v.nome || v.personalizada?.nome || v.verba)).filter(n => /INSALUBR/.test(n) && /SOBRE|REFLEXO/.test(n));
+    const representados = [...reflexos,...autonomos];
+    for (const r of contratuais) {
+      const curto = r.replace(/\s+SOBRE\s+.*$/, '');
+      if (representados.includes('TODOS')) continue; // o controle acima exige revisao de "todos"
+      if (!representados.some(n => n === r || n === curto || n.startsWith(curto+' SOBRE'))) {
+        registrar(verificacoes, ctx+' / reflexo '+r, 'falha', 'reflexo deferido da insalubridade nao representado na especificacao. Ative o reflexo correspondente do catalogo ou demonstre sua apuracao autonoma vinculada ao titulo.');
+      }
+    }
+  }
+
   // pagamentos: identidade, prova, saldo de cobertura (um recibo pode ser fracionado; o consumo somado,
   // inclusive por ids derivados, não pode passar do valor do pagamento original)
   const raiz = (pg, visto = new Set()) => { let x = pg; while (x && x.derivadoDe && pags.has(x.derivadoDe) && !visto.has(x.id)) { visto.add(x.id); x = pags.get(x.derivadoDe); } return x; };

@@ -61,6 +61,9 @@ simulação.
 
 ## Etapa 2 — Leitura integral
 
+Use o fluxo nativo do MCP registrado e as referências deste repositório; não dependa de skills externas de leitura. Inicie com `documento_inventario`, confira `paginasParaRevisaoVisual` e `segmentacaoPje` com o sumário dos autos. O inventário não certifica leitura. Para extração externa, force `pdftotext -enc UTF-8 -layout`; o indexador local opcional `scripts/indexar-autos.mjs` também força UTF-8 e permite OCR seletivo (veja LEITURA.md). Não é necessário instalar OCR para ler páginas visualmente. Em autos sigilosos, examine as páginas com marca d'água e imagens, ainda que tenham texto aparente. Preserve aprovação expressa do plano e o contrato de dados antes de criar qualquer cálculo.
+
+
 `references/modulos/LEITURA.md`:
 - inventário de arquivos e páginas (`documento_inventario`: páginas com e sem texto, tipo provável,
   números de processo citados), ou `auditor_importar` sobre a leitura feita pelo AuditorProcessual

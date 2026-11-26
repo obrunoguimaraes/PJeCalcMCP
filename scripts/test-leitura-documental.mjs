@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import { analisarTextoPje, segmentarPaginasPje, carimboPje } from '../server/lib/texto-pje.mjs';
+import { lerPdf } from '../server/lib/pdf.mjs';
+const rodape = (id='abc1234', folha=1) => 'Documento assinado eletronicamente por PESSOA FICTICIA, em 01/01/2026, as 10:00:00 - '+id+'\nFls.: '+folha;
+const marca = 'Documento em sigilo ou segredo de justiça\nUsuário em visibilidade: USUARIO FICTICIO';
+const letras = [...marca.replace(/\s/g,'')].join('\n');
+for (const t of [marca, letras, letras.replace(/\n/g,'\r\n')]) {
+  const r = analisarTextoPje(rodape()+'\n'+t,{imagens:1});
+  assert.equal(r.marcaSigilo,true);
+  assert.equal(r.temTexto,false);
+  assert.equal(r.revisaoVisual,true);
+  assert.equal(r.caracteresUteis,0);
+  const misto = analisarTextoPje('SALARIO BASE DE REFERENCIA 3.450,12\n'+t+'\n'+rodape(),{imagens:1});
+  assert.equal(misto.temTexto,true);
+  assert.equal(misto.revisaoVisual,true);
+  assert.match(misto.textoUtil,/3\.450,12/);
+}
+assert.equal(analisarTextoPje(rodape()).temTexto,false);
+assert.equal(analisarTextoPje('Sentenca com fundamentacao e dispositivo.').temTexto,true);
+assert.equal(carimboPje('Fls.: 7\n'+rodape('abc1234',7)).folha,7);
+assert.equal(carimboPje(rodape('abc1234')+'\n'+rodape('def5678')).ambiguo,true);
+const s = segmentarPaginasPje([rodape('abc1234',1),rodape('abc1234',2),'sem rodape',rodape('def5678',4)].map((texto,i)=>({texto,numero:i+1})));
+assert.deepEqual(s.pecas.map(p=>[p.idPje,p.inicio,p.fim]),[['abc1234',1,2],[null,3,3],['def5678',4,4]]);
+assert.deepEqual(s.paginasSemIdConfirmado,[3]);
+const fluxo='BT /F1 10 Tf 1 0 0 1 30 700 Tm (Documento em sigilo ou segredo de justica) Tj ET BT /F1 10 Tf 1 0 0 1 30 680 Tm (Usuario em visibilidade: USUARIO FICTICIO) Tj ET';
+const pdf=Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 800] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n5 0 obj\n<< /Length '+Buffer.byteLength(fluxo)+' >>\nstream\n'+fluxo+'\nendstream\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n','latin1');
+const pagina=lerPdf(pdf).paginas[0];
+assert.equal(pagina.marcaSigilo,true);
+assert.equal(pagina.temTexto,false);
+assert.match(pagina.texto,/Documento em sigilo/);
+console.log('Testes de leitura documental: OK (sigilo, CRLF, texto misto, segmentacao e PDF sintetico)');
